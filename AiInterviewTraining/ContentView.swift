@@ -25,7 +25,7 @@ struct ContentView: View {
             VStack {
                 Text("🎙️ AI Interview Training")
                     .font(.title)
-                    .bold()
+                   
                     .padding()
 
                 NavigationLink(destination: HistoryView()) {
