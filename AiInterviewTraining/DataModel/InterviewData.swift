@@ -17,6 +17,8 @@ class InterviewResult {
     var speed: Double
     var speedCategory: String
     var confidence: String
+    @Relationship(deleteRule: .cascade) var report: InterviewReport?
+
     
     init(id: UUID = UUID(), date: Date = Date(), questions: [InterviewQuestion], pitch: Double, speed: Double, speedCategory: String, confidence: String) {
         self.id = id
@@ -26,6 +28,7 @@ class InterviewResult {
         self.speed = speed
         self.speedCategory = speedCategory
         self.confidence = confidence
+       
     }
 }
 

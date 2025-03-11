@@ -11,7 +11,7 @@ import SwiftUI
 struct AiInterviewTrainingApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HomePageView()
                 .modelContainer(for: InterviewResult.self)
         }
     }

@@ -31,7 +31,6 @@ class AudioRecorder: NSObject, AVAudioRecorderDelegate {
 
         audioFileURL = FileManager.default.temporaryDirectory.appendingPathComponent("recordedAudio.m4a")
 
-        // ✅ التأكد من حذف الملف السابق
         if let fileURL = audioFileURL, FileManager.default.fileExists(atPath: fileURL.path) {
             try? FileManager.default.removeItem(at: fileURL)
         }

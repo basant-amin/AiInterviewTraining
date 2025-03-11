@@ -98,7 +98,73 @@ class GPTService {
         }
     }
 
+    func stopSpeaking() {
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+            print("🛑 Speech stopped.")
+        }
+    }
 
+    
+    
+    // Function to generate an interview performance report using GPT
+    func generateReport(pitch: Double, speed: Double, speedCategory: String, confidence: String, completion: @escaping (String?) -> Void) {
+        let prompt = """
+        Analyze the following voice interview performance metrics and provide a structured feedback report:
+
+        - 🎤 Pitch: \(pitch)
+        - ⚡ Speed: \(speed) (\(speedCategory))
+        - ✅ Confidence: \(confidence)
+
+        Provide feedback on the candidate's fluency, articulation, and confidence.
+        Offer practical suggestions for improvement and highlight strengths.
+        Keep the response structured and concise.
+        """
+
+        let requestBody: [String: Any] = [
+            "model": "gpt-3.5-turbo",
+            "messages": [["role": "user", "content": prompt]],
+            "max_tokens": 250
+        ]
+
+        guard let url = URL(string: endpoint) else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            print("❌ Error preparing request: \(error)")
+            completion(nil)
+            return
+        }
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {
+                print("❌ API Request Failed: \(error?.localizedDescription ?? "Unknown error")")
+                completion(nil)
+                return
+            }
+
+            do {
+                let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                if let choices = jsonResponse?["choices"] as? [[String: Any]],
+                   let message = choices.first?["message"] as? [String: Any],
+                   let report = message["content"] as? String {
+                    completion(report)
+                } else {
+                    completion(nil)
+                }
+            } catch {
+                print("❌ Error parsing response: \(error)")
+                completion(nil)
+            }
+        }
+
+        task.resume()
+    }
 
 
 }
