@@ -22,7 +22,7 @@ struct HistoryView: View {
                     .padding()
 
                 if interviews.isEmpty {
-                    Text("🗃️ No previous interviews found.")
+                    Text("🗃️ No previous interviews founded.")
                         .foregroundColor(.gray)
                         .padding()
                 } else {
