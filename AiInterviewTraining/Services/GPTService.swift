@@ -20,24 +20,25 @@ class GPTService {
         self.apiKey = key
     }
 
-    func generateInterviewQuestions(completion: @escaping ([String]?) -> Void) {
+    func generateInterviewQuestions(for category: String, completion: @escaping ([String]?) -> Void) {
         let prompt = """
-        Generate 5 job interview questions. Make sure they are structured and relevant.
+        Generate 5 job interview questions related to \(category). 
+        Make sure they are structured and relevant.
         Output only the questions in a numbered list.
         """
-
+        
         let requestBody: [String: Any] = [
             "model": "gpt-3.5-turbo",
             "messages": [["role": "user", "content": prompt]],
             "max_tokens": 300
         ]
-
+        
         guard let url = URL(string: endpoint) else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-
+        
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         } catch {
@@ -45,14 +46,14 @@ class GPTService {
             completion(nil)
             return
         }
-
+        
         let task = URLSession.shared.dataTask(with: request) { data, _, error in
             guard let data = data, error == nil else {
                 print("❌ API Request Failed: \(error?.localizedDescription ?? "Unknown error")")
                 completion(nil)
                 return
             }
-
+            
             do {
                 let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any]
                 if let choices = jsonResponse?["choices"] as? [[String: Any]],
@@ -69,9 +70,11 @@ class GPTService {
                 completion(nil)
             }
         }
-
+        
         task.resume()
     }
+
+
 
     func speakText(_ text: String) {
         let audioSession = AVAudioSession.sharedInstance()

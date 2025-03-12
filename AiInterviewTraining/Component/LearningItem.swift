@@ -1,3 +1,11 @@
+//
+//  LearningItem.swift
+//  AiInterviewTraining
+//
+//  Created by basant amin bakir on 12/03/2025.
+//
+import SwiftUI
+
 struct LearningItem: View {
     let title: String
     let icon: String
@@ -7,17 +15,18 @@ struct LearningItem: View {
             Image(systemName: icon)
                 .foregroundColor(.white)
                 .padding()
-                .background(Color.blue)
+                .background(Color.dBlue4)
                 .clipShape(Circle())
             
             Text(title)
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundColor(.white)
+                
             
             Spacer()
         }
         .padding()
-        .background(Color(UIColor.systemGray6))
+        .background(Color.dBlue1)
         .cornerRadius(12)
         .shadow(radius: 2)
     }

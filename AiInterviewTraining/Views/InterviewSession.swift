@@ -27,7 +27,6 @@ struct InterviewSession: View {
     let processor = AudioProcessor()
     let gptService = GPTService()
     
-    // ✅ استقبال التصنيف المختار من صفحة HomePage
     let selectedCategory: String
     
     var body: some View {
@@ -48,7 +47,6 @@ struct InterviewSession: View {
                         .padding()
                 }
                 
-                // ✅ زر بدء المقابلة
                 Button("🚀 Start Interview") {
                     startInterview()
                 }
@@ -58,7 +56,6 @@ struct InterviewSession: View {
                 .cornerRadius(10)
                 .disabled(isInterviewCompleted)
 
-                // ✅ زر بدء وإيقاف التسجيل
                 Button(isRecording ? "⏹ Stop Recording" : "🎤 Start Recording") {
                     if isRecording {
                         recorder.stopRecording { fileURL in
@@ -87,7 +84,6 @@ struct InterviewSession: View {
                 .cornerRadius(10)
                 .disabled(!hasStarted)
 
-                // ✅ الانتقال لصفحة النتيجة بعد انتهاء المقابلة
                 NavigationLink(
                     destination: ResultsView(
                         pitch: finalPitch,
@@ -139,7 +135,6 @@ struct InterviewSession: View {
         }
     }
     
-    // ✅ تحليل الملف الصوتي بعد انتهاء التسجيل
     private func processAudioFile(_ fileURL: URL) {
         if let audioData = processor.extractAudioData(from: fileURL) {
             if let result = AiInterview.shared.analyzeVoice(audioData: audioData) {
@@ -157,7 +152,6 @@ struct InterviewSession: View {
         }
     }
     
-    // ✅ إنهاء المقابلة وتوليد التقرير
     private func endInterview() {
         if isRecording {
             recorder.stopRecording { fileURL in
@@ -234,7 +228,6 @@ struct InterviewSession: View {
         }
     }
     
-    // ✅ إعادة ضبط حالة المقابلة
     private func resetInterview() {
         currentQuestionIndex = 0
         questions = []
