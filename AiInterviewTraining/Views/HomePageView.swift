@@ -105,7 +105,7 @@ struct HomePageView: View {
                          .padding(.top,20)
                      
                      VStack(spacing: 12) {
-                         LearningItem(title: "Before the Interview", icon: "book.fill")
+                         LearningItem(title: "Befor the Interview", icon: "book.fill")
                          LearningItem(title: "During the Interview", icon: "mic.fill")
                          LearningItem(title: "After the Interview", icon: "checkmark.circle.fill")
                      }
