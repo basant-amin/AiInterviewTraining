@@ -14,9 +14,11 @@ struct ResultsView: View {
     let speedCategory: String
     let confidence: String
     let report: String
-    
+    let onReset: (() -> Void)
+
+    @State private var isLoading = true
+
     var body: some View {
-        
         VStack {
             Text("📊 Your Result")
                 .font(.title)
@@ -29,18 +31,29 @@ struct ResultsView: View {
                     .opacity(0.3)
                     .foregroundColor(Color.gray)
 
-                Circle()
-                    .trim(from: 0.0, to: CGFloat(min(overallScore() / 100, 1.0)))
-                    .stroke(Color.green, lineWidth: 10)
-                    .rotationEffect(.degrees(-90))
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .frame(width: 50, height: 50)
+                } else {
+                    Circle()
+                        .trim(from: 0.0, to: CGFloat(min(overallScore() / 100, 1.0)))
+                        .stroke(Color.green, lineWidth: 10)
+                        .rotationEffect(.degrees(-90))
 
-                Text("\(Int(overallScore()))%")
-                    .font(.title)
-                    .bold()
-                    .foregroundColor(.green)
+                    Text("\(Int(overallScore()))%")
+                        .font(.title)
+                        .bold()
+                        .foregroundColor(.green)
+                }
             }
             .frame(width: 120, height: 120)
             .padding()
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    isLoading = false
+                }
+            }
 
             VStack(alignment: .leading) {
                 HStack {
@@ -80,18 +93,25 @@ struct ResultsView: View {
                     .padding(.bottom, 5)
 
                 ScrollView {
-                    Text(report)
-                        .font(.body)
-                        .padding()
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(10)
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .frame(width: 30, height: 30)
+                    } else {
+                        Text(report)
+                            .font(.body)
+                            .padding()
+                            .background(Color(UIColor.systemGray6))
+                            .cornerRadius(10)
+                    }
                 }
                 .frame(height: 200)
             }
             .padding()
 
             Button("🔄 Restart Interview") {
-                restartInterview()
+                onReset() 
+                presentationMode.wrappedValue.dismiss()
             }
             .padding()
             .background(Color.blue)
@@ -104,21 +124,18 @@ struct ResultsView: View {
     private func overallScore() -> Double {
         return (pitch * 100 + speed * 100) / 2
     }
-
-    private func restartInterview() {
-        print("🔄 Restarting interview...")
-        presentationMode.wrappedValue.dismiss() 
-    }
 }
 
-#Preview {
-    ResultsView(
-        pitch: 0.5,
-        speed: 0.4,
-        speedCategory: "Medium",
-        confidence: "High",
-        report: """
-        Overall, 
-        """
-    )
-}
+
+//
+//#Preview {
+//    ResultsView(
+//        pitch: 0.5,
+//        speed: 0.4,
+//        speedCategory: "Medium",
+//        confidence: "High",
+//        report: """
+//        Overall, 
+//        """, onReset: () -> Void
+//    )
+//}
