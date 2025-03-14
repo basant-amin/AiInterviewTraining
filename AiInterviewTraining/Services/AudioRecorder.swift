@@ -78,11 +78,9 @@ class AudioRecorder: NSObject, AVAudioRecorderDelegate {
 
         recorder.stop()
         
-        // ✅ تأكيد أن الملف المسجل موجود
         let recordedFileURL = recorder.url
         print("✅ Recording stopped. File saved at: \(recordedFileURL)")
 
-        // ✅ تأخير بسيط قبل تنفيذ completion (إعطاء وقت للنظام لمعالجة الملف)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             completion(recordedFileURL)
         }

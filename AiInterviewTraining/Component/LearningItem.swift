@@ -21,7 +21,7 @@ struct LearningItem: View {
             Text(title)
                 .font(.headline)
                 .foregroundColor(.white)
-                
+            
             
             Spacer()
         }

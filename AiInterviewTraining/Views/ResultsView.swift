@@ -15,127 +15,146 @@ struct ResultsView: View {
     let confidence: String
     let report: String
     let onReset: (() -> Void)
-
+    
     @State private var isLoading = true
-
+    
+    func getColor(for percentage: Double) -> Color {
+        if percentage <= 30 {
+            return Color("S2")
+        } else if percentage >= 31 && percentage <= 74 {
+            return Color("S3")
+        } else {
+            return Color("S1")
+        }
+    }
+    
     var body: some View {
-        VStack {
-            Text("📊 Your Result")
-                .font(.title)
-                .bold()
-                .padding()
-
-            ZStack {
-                Circle()
-                    .stroke(lineWidth: 10)
-                    .opacity(0.3)
-                    .foregroundColor(Color.gray)
-
-                if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                        .frame(width: 50, height: 50)
-                } else {
+        ScrollView {
+            VStack(spacing: 20) {
+                
+                HStack {
+                    Button(action: {
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    Text("Your Result")
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                
+                ZStack {
                     Circle()
-                        .trim(from: 0.0, to: CGFloat(min(overallScore() / 100, 1.0)))
-                        .stroke(Color.green, lineWidth: 10)
-                        .rotationEffect(.degrees(-90))
-
-                    Text("\(Int(overallScore()))%")
-                        .font(.title)
-                        .bold()
-                        .foregroundColor(.green)
-                }
-            }
-            .frame(width: 120, height: 120)
-            .padding()
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    isLoading = false
-                }
-            }
-
-            VStack(alignment: .leading) {
-                HStack {
-                    Image(systemName: "waveform.circle.fill")
-                        .foregroundColor(.blue)
-                    Text("Pitch")
-                    Spacer()
-                    Text("\(String(format: "%.2f", pitch))")
-                }
-                .padding()
-
-                HStack {
-                    Image(systemName: "speedometer")
-                        .foregroundColor(.yellow)
-                    Text("Speed (\(speedCategory))")
-                    Spacer()
-                    Text("\(String(format: "%.2f", speed))")
-                }
-                .padding()
-
-                HStack {
-                    Image(systemName: "star.circle.fill")
-                        .foregroundColor(.gray)
-                    Text("Confidence")
-                    Spacer()
-                    Text(confidence)
-                }
-                .padding()
-            }
-            .background(Color(UIColor.systemGray6))
-            .cornerRadius(10)
-            .padding()
-
-            VStack(alignment: .leading) {
-                Text("📝 Report Summary")
-                    .font(.headline)
-                    .padding(.bottom, 5)
-
-                ScrollView {
+                        .stroke(lineWidth: 10)
+                        .opacity(0.3)
+                        .foregroundColor(Color.gray)
+                    
                     if isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle())
-                            .frame(width: 30, height: 30)
+                            .frame(width: 50, height: 50)
                     } else {
-                        Text(report)
-                            .font(.body)
-                            .padding()
-                            .background(Color(UIColor.systemGray6))
-                            .cornerRadius(10)
+                        Circle()
+                            .trim(from: 0.0, to: CGFloat(min(overallScore() / 100, 1.0)))
+                            .stroke(getColor(for: overallScore()), lineWidth: 10)
+                            .rotationEffect(.degrees(-90))
+                        
+                        Text("\(Int(overallScore()))%")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(getColor(for: overallScore()))
                     }
                 }
-                .frame(height: 200)
+                .frame(width: 120, height: 120)
+                .padding()
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        isLoading = false
+                        print("✅ Report Loaded: \(report)")
+                    }
+                }
+                
+                VStack(spacing: 10) {
+                    ResultRow(iconName: "speak", title: "Speak", value: "\(String(format: "%.2f", pitch * 100))%", color: Color("TBlue1"))
+                    Divider().background(Color.white)
+                    
+                    ResultRow(iconName: "Speed", title: "Speed (\(speedCategory))", value: "\(String(format: "%.2f", speed * 100))%", color: Color("Yellow1"))
+                    Divider().background(Color.white)
+                    
+                    ResultRow(iconName: "Data", title: "Confidence", value: confidence, color: Color("Purple1"))
+                }
+                .padding()
+                
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Request Details")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    ZStack {
+                        Color("DBlue1")
+                            .cornerRadius(10)
+                            .frame(maxWidth: .infinity)
+                        
+                        VStack(alignment: .leading) {
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                    .frame(width: 30, height: 30)
+                            } else {
+                                Text(report)
+                                    .font(.body)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .padding(.vertical, 10)
+                    }
+                }
+                .padding(.horizontal)
+                
+                Button(action: {
+                    onReset()
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Restart Interview")
+                            .font(.body)
+                            .foregroundColor(.white)
+                            .fontWeight(.bold)
+                    }
+                    .padding()
+                    .background(Color("Blue2"))
+                    .cornerRadius(15)
+                }
+                .padding(.top, 10)
             }
             .padding()
-
-            Button("🔄 Restart Interview") {
-                onReset() 
-                presentationMode.wrappedValue.dismiss()
-            }
-            .padding()
-            .background(Color.blue)
-            .foregroundColor(.white)
-            .cornerRadius(10)
+            .background(Color("DBlue4"))
         }
-        .padding()
+        .background(Color("DBlue4"))
+        .navigationBarBackButtonHidden(true)
+        
     }
-
+    
     private func overallScore() -> Double {
         return (pitch * 100 + speed * 100) / 2
     }
 }
 
 
-//
-//#Preview {
-//    ResultsView(
-//        pitch: 0.5,
-//        speed: 0.4,
-//        speedCategory: "Medium",
-//        confidence: "High",
-//        report: """
-//        Overall, 
-//        """, onReset: () -> Void
-//    )
-//}
+#Preview {
+    ResultsView(
+        pitch: 0.5,
+        speed: 0.4,
+        speedCategory: "Medium",
+        confidence: "High",
+        report: "This is an example report showing your performance.",
+        onReset: {}
+    )
+}

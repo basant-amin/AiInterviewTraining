@@ -14,7 +14,7 @@ class InterviewReport {
     @Attribute(.unique) var id: UUID
     var date: Date
     var report: String
-    @Relationship(deleteRule: .cascade) var interviewResult: InterviewResult? 
+    @Relationship(deleteRule: .cascade) var interviewResult: InterviewResult?
 
     init(id: UUID = UUID(), date: Date = Date(), report: String, interviewResult: InterviewResult? = nil) {
         self.id = id

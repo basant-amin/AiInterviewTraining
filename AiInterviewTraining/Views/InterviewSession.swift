@@ -22,7 +22,8 @@ struct InterviewSession: View {
     @State private var finalConfidence: String = ""
     @State private var generatedReport: String = ""
     @State private var showingResults = false
-    @State private var isManuallyEnded = false
+    @State private var hasSavedResult = false
+    
     
     let recorder = AudioRecorder()
     let processor = AudioProcessor()
@@ -33,12 +34,29 @@ struct InterviewSession: View {
     var body: some View {
         NavigationStack {
             VStack {
-                Text("🎙️ AI Interview: \(selectedCategory)")
+                Text("🎙️AI Interview: \(selectedCategory)")
                     .font(.title)
                     .padding()
                 
+                NavigationLink(destination: ResultsView(
+                    pitch: finalPitch,
+                    speed: finalSpeed,
+                    speedCategory: finalSpeedCategory,
+                    confidence: finalConfidence,
+                    report: generatedReport,
+                    onReset: {
+                        print("No reset needed in HistoryView")
+                    }
+                    
+                )
+                    .onDisappear {
+                        resetInterview()
+                    }, isActive: $showingResults) {
+                        EmptyView()
+                    }
+                
                 if isLoading {
-                    ProgressView("Generating questions for \(selectedCategory)...")
+                    ProgressView("Generating questions...")
                 } else if currentQuestionIndex < questions.count {
                     Text("💬 Question: \(questions[currentQuestionIndex])")
                         .font(.headline)
@@ -61,9 +79,7 @@ struct InterviewSession: View {
                     if isRecording {
                         recorder.stopRecording { fileURL in
                             if let url = fileURL {
-                                processAudioFile(url) {
-                                    print("✅ Finished processing audio")
-                                }
+                                processAudioFile(url)
                             }
                         }
                     } else {
@@ -91,19 +107,19 @@ struct InterviewSession: View {
                         pitch: finalPitch,
                         speed: finalSpeed,
                         speedCategory: finalSpeedCategory,
-                        confidence: finalConfidence,
-                        report: generatedReport,
-                        onReset: resetInterview
+                        confidence: finalConfidence, report: generatedReport, onReset: resetInterview
+                        
                     ),
+                    
                     isActive: $showingResults
                 ) {
                     EmptyView()
                 }
-
-
+                
             }
             .padding()
-            .toolbar {
+            
+            .toolbar{
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: HistoryView()) {
                         Image(systemName: "clock.arrow.circlepath")
@@ -115,28 +131,12 @@ struct InterviewSession: View {
         }
     }
     
-    private func resetInterview() {
-        print("🔄 Resetting interview...")
-        currentQuestionIndex = 0
-        questions = []
-        isRecording = false
-        hasStarted = false
-        isLoading = false
-        isInterviewCompleted = false
-        finalPitch = 0.0
-        finalSpeed = 0.0
-        finalSpeedCategory = ""
-        finalConfidence = ""
-        generatedReport = ""
-        showingResults = false
-    }
-
     private func startInterview() {
         isLoading = true
         hasStarted = true
         isInterviewCompleted = false
         
-        gptService.generateInterviewQuestions(for: selectedCategory) { newQuestions in
+        gptService.generateInterviewQuestions (for: selectedCategory){ newQuestions in
             DispatchQueue.main.async {
                 isLoading = false
                 if let newQuestions = newQuestions, !newQuestions.isEmpty {
@@ -154,154 +154,217 @@ struct InterviewSession: View {
             }
         }
     }
-
-    private func processAudioFile(_ fileURL: URL, completion: @escaping () -> Void) {
-        if let audioData = processor.extractAudioData(from: fileURL) {
-            if let result = AiInterview.shared.analyzeVoice(audioData: audioData) {
-                print("🔎 Detected speed: \(result.speed)")
-                print("🔎 Speed Category: \(result.speedCategory)")
-                
-                do {
-                    let existingCategory = try modelContext.fetch(FetchDescriptor<Category>())
-                        .first(where: { $0.name == selectedCategory })
-
-                    if let category = existingCategory {
-                        saveInterviewResult(
-                            pitch: result.pitch,
-                            speed: result.speed,
-                            speedCategory: result.speedCategory,
-                            confidence: result.confidence,
-                            category: category
-                        )
-                    } else {
-                        let newCategory = Category(name: selectedCategory)
-                        modelContext.insert(newCategory)
-
-                        saveInterviewResult(
-                            pitch: result.pitch,
-                            speed: result.speed,
-                            speedCategory: result.speedCategory,
-                            confidence: result.confidence,
-                            category: newCategory
-                        )
-                    }
-
-                    self.finalPitch = result.pitch
-                    self.finalSpeed = result.speed
-                    self.finalSpeedCategory = result.speedCategory
-                    self.finalConfidence = result.confidence
-
-                    completion()
-                    
-                    if !self.isInterviewCompleted && !self.isManuallyEnded {
-                        print("➡️ Moving to next question...")
-                        self.startNextQuestion()
-                    }
-                    
-                } catch {
-                    print("❌ Failed to save result: \(error.localizedDescription)")
-                    completion()
-                }
-            }
-        } else {
-            print("❌ Failed to extract audio data.")
-            completion()
-        }
-    }
     
-
-    private func endInterview() {
-        isManuallyEnded = true
-        isInterviewCompleted = true
-        gptService.stopSpeaking()
         
-        if isRecording {
-            recorder.stopRecording { fileURL in
-                if let url = fileURL {
-                    processAudioFile(url) {
-                        gptService.generateReport(
-                            pitch: self.finalPitch,
-                            speed: self.finalSpeed,
-                            speedCategory: self.finalSpeedCategory,
-                            confidence: self.finalConfidence
-                        ) { report in
-                            DispatchQueue.main.async {
-                                let finalReport = report ?? "No report available"
-                                self.generatedReport = finalReport
-                                self.isLoading = false
-                                
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    self.showingResults = true
-                                }
+    private func processAudioFile(_ fileURL: URL) {
+        let audioProcessor = AudioProcessor()
+        
+        if let audioData = audioProcessor.extractAudioData(from: fileURL) {
+            if let result = AiInterview.shared.analyzeVoice(audioData: audioData) {
+                
+                let existingResult = try? modelContext.fetch(FetchDescriptor<InterviewResult>())
+                    .first(where: {
+                        $0.pitch == result.pitch &&
+                        $0.speed == result.speed &&
+                        $0.confidence == result.confidence &&
+                        $0.category?.name == selectedCategory
+                    })
+                
+                if existingResult == nil && !hasSavedResult {
+                    let existingCategory = try? modelContext.fetch(FetchDescriptor<Category>())
+                        .first(where: { $0.name == selectedCategory })
+                    
+                    let category = existingCategory ?? Category(name: selectedCategory)
+                    if existingCategory == nil {
+                        modelContext.insert(category)
+                    }
+                    
+                    let newInterview = InterviewResult(
+                        questions: questions.map { InterviewQuestion(question: $0, answer: "User's answer here") },
+                        pitch: result.pitch,
+                        speed: result.speed,
+                        speedCategory: result.speedCategory,
+                        confidence: result.confidence,
+                        category: category
+                    )
+                    modelContext.insert(newInterview)
+                    
+                    gptService.generateReport(
+                        pitch: result.pitch,
+                        speed: result.speed,
+                        speedCategory: result.speedCategory,
+                        confidence: result.confidence
+                    ) { report in
+                        DispatchQueue.main.async {
+                            let finalReport = report ?? "No report available"
+                            let newReport = InterviewReport(
+                                report: finalReport,
+                                interviewResult: newInterview
+                            )
+                            modelContext.insert(newReport)
+                            newInterview.report = newReport
+                            
+                            do {
+                                try modelContext.save()
+                                print("✅ Report saved successfully!")
+                            } catch {
+                                print("❌ Failed to save report: \(error)")
+                            }
+                            
+                            self.finalPitch = result.pitch
+                            self.finalSpeed = result.speed
+                            self.finalSpeedCategory = result.speedCategory
+                            self.finalConfidence = result.confidence
+                            self.generatedReport = finalReport
+                            
+                            self.hasSavedResult = true
+                            
+                            if self.currentQuestionIndex < self.questions.count - 1 {
+                                self.currentQuestionIndex += 1
+                                self.gptService.speakText(self.questions[self.currentQuestionIndex])
+                            } else {
+                                self.isInterviewCompleted = true
                             }
                         }
                     }
+                } else {
+                    print("⚠️ Result already exists — Skipping insert.")
                 }
+            } else {
+                print("❌ Failed to analyze voice data.")
             }
         } else {
-            gptService.generateReport(
-                pitch: self.finalPitch,
-                speed: self.finalSpeed,
-                speedCategory: self.finalSpeedCategory,
-                confidence: self.finalConfidence
-            ) { report in
-                DispatchQueue.main.async {
-                    let finalReport = report ?? "No report available"
-                    self.generatedReport = finalReport
-                    self.isLoading = false
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        self.showingResults = true
-                    }
-                }
-            }
+            print("❌ Failed to extract audio data.")
         }
     }
-
     
-    private func startNextQuestion() {
-        if currentQuestionIndex < questions.count - 1 {
-            currentQuestionIndex += 1
-            let nextQuestion = questions[currentQuestionIndex]
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                if !self.isInterviewCompleted && !self.isManuallyEnded {
-                    self.gptService.speakText(nextQuestion)
+        
+    private func endInterview() {
+        if isRecording {
+            recorder.stopRecording { fileURL in
+                if let url = fileURL {
+                    processAudioFile(url)
                 }
             }
-        } else {
-            print("✅ All questions completed!")
+        }
+        
+        isRecording = false
+        hasStarted = false
+        gptService.stopSpeaking()
+        isInterviewCompleted = true
+        
+        if hasSavedResult {
+            print("⚠️ Result already saved — Skipping save in endInterview.")
+            self.showingResults = true
+            return
+        }
+        
+        let existingCategory = try? modelContext.fetch(FetchDescriptor<Category>())
+            .first(where: { $0.name == selectedCategory })
+        
+        let category = existingCategory ?? Category(name: selectedCategory)
+        if existingCategory == nil {
+            modelContext.insert(category)
+        }
+        
+        let newInterview = InterviewResult(
+            questions: questions.map { InterviewQuestion(question: $0, answer: "User's answer here") },
+            pitch: finalPitch,
+            speed: finalSpeed,
+            speedCategory: finalSpeedCategory,
+            confidence: finalConfidence,
+            category: category
+        )
+        
+        modelContext.insert(newInterview)
+        
+        gptService.generateReport(
+            pitch: finalPitch,
+            speed: finalSpeed,
+            speedCategory: finalSpeedCategory,
+            confidence: finalConfidence
+        ) { report in
             DispatchQueue.main.async {
+                let finalReport = report ?? "No report available"
+                let newReport = InterviewReport(
+                    report: finalReport,
+                    interviewResult: newInterview
+                )
+                modelContext.insert(newReport)
+                newInterview.report = newReport
+                
+                do {
+                    try modelContext.save()
+                    print("✅ Report saved successfully!")
+                } catch {
+                    print("❌ Failed to save report: \(error)")
+                }
+                
+                self.finalPitch = newInterview.pitch
+                self.finalSpeed = newInterview.speed
+                self.finalSpeedCategory = newInterview.speedCategory
+                self.finalConfidence = newInterview.confidence
+                self.generatedReport = newReport.report
+                
                 self.showingResults = true
+                self.hasSavedResult = true
             }
         }
     }
-
+    
+    
+    private func resetInterview() {
+        currentQuestionIndex = 0
+        questions = []
+        isRecording = false
+        hasStarted = false
+        isLoading = false
+    }
+    
     private func saveInterviewResult(
         pitch: Double,
         speed: Double,
         speedCategory: String,
         confidence: String,
-        category: Category
-    ) {
+        report: String? = nil
+    ) -> InterviewResult {
+        let questionsData = questions.map { InterviewQuestion(question: $0, answer: "User's answer here") }
+        
         let newInterview = InterviewResult(
+            questions: questionsData,
             pitch: pitch,
             speed: speed,
             speedCategory: speedCategory,
-            confidence: confidence,
-            category: category
+            confidence: confidence
         )
+        
         modelContext.insert(newInterview)
-
         do {
             try modelContext.save()
-            print("✅ Saved interview result")
+            print("✅ Interview data saved successfully.")
         } catch {
-            print("❌ Error saving result: \(error.localizedDescription)")
+            print("❌ Failed to save interview: \(error.localizedDescription)")
         }
+        
+        if let report = report {
+            let newReport = InterviewReport(
+                report: report,
+                interviewResult: newInterview
+            )
+            modelContext.insert(newReport)
+            do {
+                try modelContext.save()
+                print("✅ Report saved successfully.")
+            } catch {
+                print("❌ Failed to save report: \(error.localizedDescription)")
+            }
+        }
+        
+        return newInterview
     }
+    
 }
 
-#Preview {
-    InterviewSession(selectedCategory: "Coding")
-}
+//#Preview {
+//    InterviewSession()
+//}

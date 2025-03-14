@@ -12,17 +12,15 @@ import SwiftData
 class InterviewResult {
     @Attribute(.unique) var id: UUID
     var date: Date
+    var questions: [InterviewQuestion]
     var pitch: Double
     var speed: Double
     var speedCategory: String
     var confidence: String
-    
-    @Relationship(deleteRule: .nullify) var category: Category? // ✅ ربط مع Category
-    
-    @Relationship(deleteRule: .cascade) var questions: [InterviewQuestion] = []
     @Relationship(deleteRule: .cascade) var report: InterviewReport?
+    @Relationship(deleteRule: .nullify) var category: Category?
 
-    init(id: UUID = UUID(), date: Date = Date(), questions: [InterviewQuestion] = [], pitch: Double, speed: Double, speedCategory: String, confidence: String, category: Category?) {
+        init(id: UUID = UUID(), date: Date = Date(), questions: [InterviewQuestion], pitch: Double, speed: Double, speedCategory: String, confidence: String,category: Category? = nil) {
         self.id = id
         self.date = date
         self.questions = questions
@@ -31,6 +29,7 @@ class InterviewResult {
         self.speedCategory = speedCategory
         self.confidence = confidence
         self.category = category
+       
     }
 }
 
@@ -44,3 +43,6 @@ class InterviewQuestion {
         self.answer = answer
     }
 }
+
+
+

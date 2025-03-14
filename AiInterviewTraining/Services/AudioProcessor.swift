@@ -18,12 +18,12 @@ class AudioProcessor {
             let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount)
             
             try file.read(into: buffer!)
-
+            
             if let floatChannelData = buffer?.floatChannelData {
                 let frameLength = Int(buffer!.frameLength)
                 let audioSamples = Array(UnsafeBufferPointer(start: floatChannelData[0], count: frameLength))
                 
-                print("🔍 First 10 Values: \(audioSamples.prefix(10))") 
+                print("🔍 First 10 Values: \(audioSamples.prefix(10))")
                 return audioSamples
             }
         } catch {
